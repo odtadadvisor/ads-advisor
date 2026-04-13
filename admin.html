@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>管理后台 — 广告问答助手</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+:root{
+  --primary:#232F3E;--accent:#FF9900;--accent-hover:#E88B00;
+  --bg:#F5F7FA;--card:#FFFFFF;--text:#1A1A2E;--text-light:#6B7280;
+  --border:#E5E7EB;--success:#10B981;--blue:#3B82F6;--red:#EF4444;
+  --yellow:#F59E0B;--shadow:0 4px 24px rgba(0,0,0,0.06);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans SC','Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+</style>
+<style>
+/* Header */
+.header{background:var(--primary);color:white;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
+.header-left{display:flex;align-items:center;gap:12px;}
+.header-logo{font-size:1.3rem;font-weight:700;}
+.header-logo span{color:var(--accent);}
+.header-back{font-size:0.82rem;color:rgba(255,255,255,0.6);text-decoration:none;transition:color 0.2s;}
+.header-back:hover{color:var(--accent);}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:24px;max-width:1200px;margin:0 auto;}
+.stat-card{background:var(--card);border-radius:12px;padding:20px;text-align:center;box-shadow:var(--shadow);}
+.stat-num{font-size:2rem;font-weight:800;}
+.stat-num.orange{color:var(--accent);}
+.stat-num.yellow{color:var(--yellow);}
+.stat-num.green{color:var(--success);}
+.stat-num.blue{color:var(--blue);}
+.stat-label{font-size:0.8rem;color:var(--text-light);margin-top:4px;}
+
+/* Filters */
+.filters{padding:0 24px;max-width:1200px;margin:0 auto 16px;display:flex;gap:8px;flex-wrap:wrap;}
+.filter-btn{padding:6px 16px;border-radius:20px;font-size:0.82rem;border:1px solid var(--border);background:var(--card);cursor:pointer;transition:all 0.2s;color:var(--text-light);font-family:inherit;}
+.filter-btn:hover{border-color:var(--accent);color:var(--accent);}
+.filter-btn.active{background:var(--primary);color:white;border-color:var(--primary);}
+
+/* Ticket List */
+.ticket-list{padding:0 24px 40px;max-width:1200px;margin:0 auto;}
+.ticket{background:var(--card);border-radius:12px;padding:20px 24px;margin-bottom:12px;box-shadow:var(--shadow);border-left:4px solid var(--border);transition:border-color 0.2s;}
+.ticket.status-pending{border-left-color:var(--yellow);}
+.ticket.status-waiting{border-left-color:var(--accent);}
+.ticket.status-resolved{border-left-color:var(--success);}
+.ticket-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.ticket-id{font-size:0.75rem;color:var(--text-light);font-family:monospace;}
+.ticket-status{padding:3px 10px;border-radius:10px;font-size:0.72rem;font-weight:600;}
+.status-pending .ticket-status{background:#FEF3C7;color:#92400E;}
+.status-waiting .ticket-status{background:#FFF7ED;color:#C2410C;}
+.status-resolved .ticket-status{background:#ECFDF5;color:#065F46;}
+.ticket-question{font-size:0.95rem;font-weight:600;margin-bottom:6px;}
+.ticket-meta{font-size:0.8rem;color:var(--text-light);display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;}
+.ticket-ai-answer{font-size:0.85rem;color:var(--text-light);background:#F9FAFB;padding:12px;border-radius:8px;margin-bottom:10px;white-space:pre-wrap;max-height:120px;overflow-y:auto;}
+.ticket-detail{font-size:0.85rem;color:#92400E;background:#FFF7ED;padding:10px 12px;border-radius:8px;margin-bottom:10px;}
+
+/* Reply */
+.reply-area{display:flex;gap:8px;margin-top:10px;}
+.reply-area textarea{flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.85rem;font-family:inherit;resize:none;outline:none;min-height:44px;}
+.reply-area textarea:focus{border-color:var(--accent);}
+.reply-btn{padding:8px 20px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;transition:background 0.2s;white-space:nowrap;}
+.reply-btn:hover{background:var(--accent-hover);}
+.admin-reply{font-size:0.85rem;background:#EFF6FF;padding:10px 12px;border-radius:8px;color:#1E40AF;margin-top:8px;}
+.admin-reply strong{font-weight:600;}
+
+/* Empty */
+.empty{text-align:center;padding:60px 20px;color:var(--text-light);}
+.empty-icon{font-size:3rem;margin-bottom:12px;}
+
+/* Webhook config */
+.webhook-config{padding:0 24px;max-width:1200px;margin:0 auto 20px;}
+.webhook-card{background:var(--card);border-radius:12px;padding:16px 20px;box-shadow:var(--shadow);display:flex;align-items:center;gap:12px;}
+.webhook-card label{font-size:0.85rem;font-weight:600;white-space:nowrap;}
+.webhook-card input{flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:0.82rem;font-family:monospace;outline:none;}
+.webhook-card input:focus{border-color:var(--accent);}
+.webhook-card button{padding:8px 16px;background:var(--primary);color:white;border:none;border-radius:8px;font-size:0.82rem;font-weight:600;cursor:pointer;}
+.webhook-card button:hover{background:#37475A;}
+.webhook-saved{font-size:0.8rem;color:var(--success);margin-left:8px;display:none;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo">&#128274; 管理<span>后台</span></div>
+  </div>
+  <a href="index.html" class="header-back">&#8592; 返回问答页</a>
+</div>
+
+<!-- Stats -->
+<div class="stats" id="stats"></div>
+
+<!-- Webhook Config -->
+<div class="webhook-config">
+  <div class="webhook-card">
+    <label>&#128276; 企业微信 Webhook：</label>
+    <input id="webhookInput" placeholder="粘贴企业微信群机器人 Webhook URL" />
+    <button onclick="saveWebhook()">保存</button>
+    <span class="webhook-saved" id="webhookSaved">&#10003; 已保存</span>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filters">
+  <button class="filter-btn active" onclick="filterTickets('all',this)">全部</button>
+  <button class="filter-btn" onclick="filterTickets('pending',this)">&#128992; 待处理</button>
+  <button class="filter-btn" onclick="filterTickets('waiting',this)">&#128993; 等待回复</button>
+  <button class="filter-btn" onclick="filterTickets('resolved',this)">&#128994; 已解决</button>
+</div>
+
+<!-- Ticket List -->
+<div class="ticket-list" id="ticketList"></div>
+
+<script>
+let currentFilter = 'all';
+
+function getTickets() {
+  return JSON.parse(localStorage.getItem('odt_tickets') || '[]');
+}
+
+function saveTickets(tickets) {
+  localStorage.setItem('odt_tickets', JSON.stringify(tickets));
+}
+
+function renderStats() {
+  const tickets = getTickets();
+  const total = tickets.length;
+  const pending = tickets.filter(t => t.status === 'pending').length;
+  const waiting = tickets.filter(t => t.status === 'waiting').length;
+  const resolved = tickets.filter(t => t.status === 'resolved').length;
+
+  document.getElementById('stats').innerHTML = `
+    <div class="stat-card"><div class="stat-num blue">${total}</div><div class="stat-label">总工单数</div></div>
+    <div class="stat-card"><div class="stat-num yellow">${pending}</div><div class="stat-label">待处理（AI无法回答）</div></div>
+    <div class="stat-card"><div class="stat-num orange">${waiting}</div><div class="stat-label">等待回复（已转人工）</div></div>
+    <div class="stat-card"><div class="stat-num green">${resolved}</div><div class="stat-label">已解决</div></div>
+  `;
+}
+
+function renderTickets() {
+  const tickets = getTickets();
+  const list = document.getElementById('ticketList');
+
+  let filtered = tickets;
+  if (currentFilter !== 'all') {
+    filtered = tickets.filter(t => t.status === currentFilter);
+  }
+
+  // Sort: waiting first, then pending, then resolved
+  const order = { waiting: 0, pending: 1, resolved: 2 };
+  filtered.sort((a, b) => (order[a.status] || 9) - (order[b.status] || 9) || new Date(b.createdAt) - new Date(a.createdAt));
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty"><div class="empty-icon">&#128588;</div><p>暂无工单</p></div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(t => {
+    const statusText = { pending: '待处理', waiting: '等待回复', resolved: '已解决' };
+    const time = new Date(t.createdAt).toLocaleString('zh-CN');
+
+    let detailHtml = '';
+    if (t.detail) {
+      detailHtml = `<div class="ticket-detail">&#128221; 卖家补充：${escapeHtml(t.detail)}</div>`;
+    }
+
+    let aiHtml = '';
+    if (t.aiAnswer) {
+      aiHtml = `<div class="ticket-ai-answer">&#129302; AI 回答：${escapeHtml(t.aiAnswer)}</div>`;
+    }
+
+    let replyHtml = '';
+    if (t.status === 'resolved' && t.adminReply) {
+      replyHtml = `<div class="admin-reply"><strong>&#128100; 你的回复：</strong>${escapeHtml(t.adminReply)}</div>`;
+    } else if (t.status !== 'resolved') {
+      replyHtml = `
+        <div class="reply-area">
+          <textarea id="reply-${t.id}" placeholder="输入回复内容..."></textarea>
+          <button class="reply-btn" onclick="replyTicket('${t.id}')">回复并关闭</button>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="ticket status-${t.status}">
+        <div class="ticket-header">
+          <span class="ticket-id">${t.id}</span>
+          <span class="ticket-status">${statusText[t.status] || t.status}</span>
+        </div>
+        <div class="ticket-question">&#10067; ${escapeHtml(t.question)}</div>
+        <div class="ticket-meta">
+          <span>&#128197; ${time}</span>
+          <span>&#128222; ${t.contact ? escapeHtml(t.contact) : '未留联系方式'}</span>
+          <span>&#127793; 来源：${t.source === 'auto-escalated' ? 'AI无法回答' : '卖家主动转人工'}</span>
+        </div>
+        ${aiHtml}
+        ${detailHtml}
+        ${replyHtml}
+      </div>
+    `;
+  }).join('');
+}
+
+function replyTicket(ticketId) {
+  const replyEl = document.getElementById('reply-' + ticketId);
+  const reply = replyEl ? replyEl.value.trim() : '';
+  if (!reply) { alert('请输入回复内容'); return; }
+
+  const tickets = getTickets();
+  const ticket = tickets.find(t => t.id === ticketId);
+  if (ticket) {
+    ticket.status = 'resolved';
+    ticket.adminReply = reply;
+    ticket.updatedAt = new Date().toISOString();
+    saveTickets(tickets);
+    renderStats();
+    renderTickets();
+  }
+}
+
+function filterTickets(status, btn) {
+  currentFilter = status;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTickets();
+}
+
+function saveWebhook() {
+  const url = document.getElementById('webhookInput').value.trim();
+  localStorage.setItem('odt_webhook_url', url);
+  const saved = document.getElementById('webhookSaved');
+  saved.style.display = 'inline';
+  setTimeout(() => saved.style.display = 'none', 2000);
+}
+
+function loadWebhook() {
+  const url = localStorage.getItem('odt_webhook_url') || '';
+  document.getElementById('webhookInput').value = url;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Init
+loadWebhook();
+renderStats();
+renderTickets();
+
+// Auto refresh every 10s
+setInterval(() => { renderStats(); renderTickets(); }, 10000);
+</script>
+</body>
+</html>

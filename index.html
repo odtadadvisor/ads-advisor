@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>广告智能问答助手 — Amazon Ads</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+:root{
+  --primary:#232F3E;--accent:#FF9900;--accent-hover:#E88B00;
+  --bg:#F5F7FA;--card:#FFFFFF;--text:#1A1A2E;--text-light:#6B7280;
+  --border:#E5E7EB;--success:#10B981;--blue:#3B82F6;
+  --shadow:0 4px 24px rgba(0,0,0,0.06);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans SC','Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+</style>
+<style>
+/* Header */
+.header{background:var(--primary);color:white;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
+.header-left{display:flex;align-items:center;gap:12px;}
+.header-logo{font-size:1.3rem;font-weight:700;}
+.header-logo span{color:var(--accent);}
+.header-tag{font-size:0.75rem;padding:3px 10px;background:rgba(255,153,0,0.2);color:var(--accent);border-radius:12px;font-weight:500;}
+.header-admin{font-size:0.82rem;color:rgba(255,255,255,0.6);text-decoration:none;transition:color 0.2s;}
+.header-admin:hover{color:var(--accent);}
+
+/* Main */
+.main{flex:1;max-width:800px;width:100%;margin:0 auto;padding:24px 16px;display:flex;flex-direction:column;}
+
+/* Welcome */
+.welcome{text-align:center;padding:32px 20px 24px;}
+.welcome h2{font-size:1.4rem;font-weight:700;margin-bottom:8px;}
+.welcome p{font-size:0.9rem;color:var(--text-light);line-height:1.6;}
+.disclaimer{font-size:0.75rem;color:#9CA3AF;margin-top:8px;font-style:italic;}
+
+/* Quick Tags */
+.quick-tags{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:16px 0 24px;}
+.quick-tag{padding:6px 14px;background:var(--card);border:1px solid var(--border);border-radius:20px;font-size:0.82rem;color:var(--text-light);cursor:pointer;transition:all 0.2s;}
+.quick-tag:hover{border-color:var(--accent);color:var(--accent);background:#FFF7ED;}
+
+/* Chat Area */
+.chat-area{flex:1;overflow-y:auto;padding:8px 0;display:flex;flex-direction:column;gap:16px;min-height:200px;}
+.msg{display:flex;gap:10px;max-width:85%;animation:fadeIn 0.3s ease;}
+.msg-user{align-self:flex-end;flex-direction:row-reverse;}
+.msg-ai{align-self:flex-start;}
+.msg-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;flex-shrink:0;color:white;}
+.msg-user .msg-avatar{background:var(--blue);}
+.msg-ai .msg-avatar{background:var(--accent);}
+.msg-bubble{padding:12px 16px;border-radius:16px;font-size:0.9rem;line-height:1.7;white-space:pre-wrap;}
+.msg-user .msg-bubble{background:var(--blue);color:white;border-bottom-right-radius:4px;}
+.msg-ai .msg-bubble{background:var(--card);border:1px solid var(--border);border-bottom-left-radius:4px;box-shadow:var(--shadow);}
+
+/* Feedback */
+.feedback{display:flex;gap:8px;margin-top:8px;padding-left:46px;}
+.feedback-btn{padding:4px 12px;border-radius:14px;font-size:0.75rem;border:1px solid var(--border);background:var(--card);cursor:pointer;transition:all 0.2s;color:var(--text-light);}
+.feedback-btn:hover{border-color:var(--accent);color:var(--accent);}
+.feedback-btn.active-good{background:#ECFDF5;border-color:var(--success);color:var(--success);}
+.feedback-btn.active-bad{background:#FEF2F2;border-color:#EF4444;color:#EF4444;}
+.feedback-done{font-size:0.75rem;color:var(--success);padding:4px 0;}
+
+/* Input Area */
+.input-area{padding:16px 0 8px;border-top:1px solid var(--border);margin-top:auto;}
+.input-wrap{display:flex;gap:10px;align-items:flex-end;}
+.input-wrap textarea{flex:1;padding:12px 16px;border:1px solid var(--border);border-radius:16px;font-size:0.9rem;font-family:inherit;resize:none;outline:none;transition:border-color 0.2s;min-height:48px;max-height:120px;line-height:1.5;}
+.input-wrap textarea:focus{border-color:var(--accent);}
+.send-btn{width:48px;height:48px;border-radius:50%;background:var(--accent);color:white;border:none;font-size:1.2rem;cursor:pointer;transition:background 0.2s;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
+.send-btn:hover{background:var(--accent-hover);}
+.send-btn:disabled{background:#D1D5DB;cursor:not-allowed;}
+
+/* Typing indicator */
+.typing{display:flex;gap:4px;padding:8px 16px;}
+.typing span{width:8px;height:8px;background:#D1D5DB;border-radius:50%;animation:bounce 1.4s infinite;}
+.typing span:nth-child(2){animation-delay:0.2s;}
+.typing span:nth-child(3){animation-delay:0.4s;}
+
+@keyframes bounce{0%,80%,100%{transform:translateY(0);}40%{transform:translateY(-8px);}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* Human follow-up form */
+.human-form{background:#FFF7ED;border:1px solid #FED7AA;border-radius:12px;padding:16px;margin-top:8px;margin-left:46px;}
+.human-form p{font-size:0.82rem;color:#92400E;margin-bottom:10px;font-weight:500;}
+.human-form textarea{width:100%;padding:10px 12px;border:1px solid #FED7AA;border-radius:8px;font-size:0.85rem;font-family:inherit;resize:none;outline:none;min-height:60px;}
+.human-form .form-row{display:flex;gap:8px;margin-top:8px;}
+.human-form input{flex:1;padding:8px 12px;border:1px solid #FED7AA;border-radius:8px;font-size:0.85rem;font-family:inherit;outline:none;}
+.human-form button{padding:8px 20px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:0.85rem;font-weight:600;cursor:pointer;transition:background 0.2s;}
+.human-form button:hover{background:var(--accent-hover);}
+.submit-success{font-size:0.82rem;color:var(--success);font-weight:500;}
+
+/* History Panel */
+.history-panel{position:fixed;top:0;right:-380px;width:380px;height:100%;background:var(--card);box-shadow:-4px 0 24px rgba(0,0,0,0.1);z-index:1000;transition:right 0.3s ease;display:flex;flex-direction:column;}
+.history-panel.open{right:0;}
+.history-header{padding:16px 20px;background:var(--primary);color:white;display:flex;justify-content:space-between;align-items:center;}
+.history-header h3{font-size:1rem;font-weight:600;}
+.history-close{background:none;border:none;color:white;font-size:1.3rem;cursor:pointer;padding:4px 8px;}
+.history-close:hover{color:var(--accent);}
+.history-list{flex:1;overflow-y:auto;padding:12px;}
+.history-item{padding:12px 14px;border-radius:10px;margin-bottom:8px;background:#F9FAFB;border:1px solid var(--border);cursor:pointer;transition:all 0.2s;}
+.history-item:hover{border-color:var(--accent);background:#FFF7ED;}
+.history-item .hi-q{font-size:0.88rem;font-weight:600;margin-bottom:4px;color:var(--text);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.history-item .hi-time{font-size:0.72rem;color:var(--text-light);}
+.history-item .hi-status{font-size:0.7rem;padding:2px 8px;border-radius:8px;display:inline-block;margin-top:4px;}
+.hi-status.answered{background:#ECFDF5;color:#065F46;}
+.hi-status.escalated{background:#FEF3C7;color:#92400E;}
+.history-empty{text-align:center;padding:40px 20px;color:var(--text-light);font-size:0.9rem;}
+.history-clear{padding:12px 20px;border-top:1px solid var(--border);}
+.history-clear button{width:100%;padding:10px;background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;border-radius:8px;font-size:0.85rem;font-weight:500;cursor:pointer;font-family:inherit;}
+.history-clear button:hover{background:#FEE2E2;}
+.history-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:999;display:none;}
+.history-overlay.open{display:block;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo" onclick="resetChat()" style="cursor:pointer;" title="回到首页">&#128172; 广告智能<span>问答助手</span></div>
+    <span class="header-tag">AI 驱动 · 仅供参考</span>
+  </div>
+  <div style="display:flex;gap:12px;align-items:center;">
+    <a href="#" class="header-admin" onclick="toggleHistory(event)">&#128214; 历史记录</a>
+    <a href="admin.html" class="header-admin">&#128274; 管理后台</a>
+  </div>
+</div>
+
+<!-- History Overlay -->
+<div class="history-overlay" id="historyOverlay" onclick="closeHistory()"></div>
+
+<!-- History Panel -->
+<div class="history-panel" id="historyPanel">
+  <div class="history-header">
+    <h3>&#128214; 问答历史记录</h3>
+    <button class="history-close" onclick="closeHistory()">&#10005;</button>
+  </div>
+  <div class="history-list" id="historyList"></div>
+  <div class="history-clear">
+    <button onclick="clearHistory()">&#128465; 清空所有历史记录</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="welcome" id="welcome">
+    <h2>&#128075; 你好，有什么广告问题可以帮你？</h2>
+    <p>我是基于 Amazon Ads 官方资料训练的 AI 助手，可以回答关于 DSP、Sponsored Ads、广告策略等问题。</p>
+    <p class="disclaimer">⚠️ AI 回答仅供参考，不代表 Amazon 官方立场。如需更专业的支持，可随时转人工。</p>
+  </div>
+
+  <div class="quick-tags" id="quickTags">
+    <div class="quick-tag" onclick="askQuick(this)">什么是 Amazon DSP？</div>
+    <div class="quick-tag" onclick="askQuick(this)">DSP 和 Sponsored Ads 有什么区别？</div>
+    <div class="quick-tag" onclick="askQuick(this)">新店铺适合投 DSP 吗？</div>
+    <div class="quick-tag" onclick="askQuick(this)">DSP 最低预算是多少？</div>
+    <div class="quick-tag" onclick="askQuick(this)">如何衡量 DSP 广告效果？</div>
+    <div class="quick-tag" onclick="askQuick(this)">什么是 Sponsored TV？</div>
+    <div class="quick-tag" onclick="askQuick(this)">商品推广怎么用？</div>
+    <div class="quick-tag" onclick="askQuick(this)">大促期间广告怎么投？</div>
+    <div class="quick-tag" onclick="askQuick(this)">DSP 受众定向有哪些？</div>
+    <div class="quick-tag" onclick="askQuick(this)">怎么选择代理商？</div>
+  </div>
+
+  <div class="chat-area" id="chatArea"></div>
+
+  <div class="input-area">
+    <div class="input-wrap">
+      <textarea id="userInput" placeholder="输入你的广告问题..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()">&#10148;</button>
+    </div>
+  </div>
+</div>
+<script>
+// ========== KNOWLEDGE BASE (FAQ) ==========
+const knowledgeBase = [
+  {
+    keywords: ['什么是dsp','dsp是什么','amazon dsp','dsp介绍','dsp概念','需求方平台'],
+    synonyms: ['程序化广告','展示广告平台','dsp有什么用','dsp能做什么','dsp怎么理解','dsp产品','上漏斗','品牌广告平台'],
+    answer: `Amazon DSP（Demand-Side Platform，需求方平台）是亚马逊的程序化广告平台，凭借大规模精准投放实现高效转化，为品牌与消费者创造有价值的互动。
+
+🔶 核心优势：
+• 优质广告库存：覆盖 Prime Video、Twitch、体育赛事直播、Fire TV、Kindle 等亚马逊自有平台，以及数千个第三方优质网站和应用
+• 独立受众信号：基于亚马逊独有的第一方浏览、购物及流媒体数据进行精准受众定向，无需依赖第三方 Cookie
+• AI 驱动优化：利用 AI 技术自动优化投放，提升投资回报率
+• 互操作技术：与 Amazon Marketing Cloud (AMC) 深度整合，提供全链路分析能力
+
+🔶 支持的广告类型：
+• 展示广告（Display Ads）
+• 在线视频广告（Online Video）
+• 流媒体电视广告（Streaming TV）
+• 音频广告（Audio Ads）
+
+🔶 适用场景：品牌建设、新品推广、受众拓展、竞品拦截、再营销、全漏斗策略等。无论是否在亚马逊站内销售商品，都可以使用 DSP。
+
+⚠️ 注意：目前中国跨境卖家需要通过亚马逊授权的 DSP 服务商（代理商）来投放 DSP 广告，不支持卖家自助开通。`
+  },
+  {
+    keywords: ['dsp区别','sp区别','sponsored ads区别','dsp和sa','dsp和sp','区别','搜索广告'],
+    synonyms: ['有什么不同','不一样','差异','对比','比较','哪个好','选哪个','怎么选','sa和dsp','sp和dsp'],
+    answer: `DSP 与 Sponsored Ads（搜索广告）的核心区别：
+
+📌 商品推广 / Sponsored Ads（SA）：
+• 搜索驱动，基于关键词和商品定向
+• 按单次点击付费（CPC）
+• 展示在亚马逊站内搜索结果顶部/旁边/中间、商品详情页，以及站外精选优质应用和网站
+• 适合捕获已有购买意图的消费者（下漏斗）
+• 支持图片和视频格式
+• 无最低预算要求
+
+📌 Amazon DSP：
+• 受众驱动，基于人群画像和行为数据定向
+• 按千次展示付费（CPM）
+• 覆盖亚马逊站内 + Prime Video、Twitch 等自有平台 + 数千个第三方网站和应用
+• 适合品牌曝光、受众拓展和全漏斗策略（上+中漏斗）
+• 支持展示、视频、音频、流媒体电视等多种格式
+
+💡 简单来说：SA 是"等客户来找你"，DSP 是"主动去找目标客户"。两者配合使用效果最佳——DSP 负责上漏斗引流和品牌认知，SA 负责下漏斗转化收割。`
+  },
+  {
+    keywords: ['新店铺','新店','新卖家','刚开店','适合投dsp','新品牌','冷启动','新品'],
+    synonyms: ['刚注册','刚开始','新手','小白','没经验','第一次','入门','起步','出海','新开'],
+    answer: `新店铺是否适合投 DSP？答案是：非常适合，而且越早布局越好。
+
+原因：
+1️⃣ 品牌认知建设：新店铺最缺的就是品牌曝光，DSP 可以在 Prime Video、Twitch 等优质媒体上快速触达目标受众，建立品牌认知
+2️⃣ 受众资产积累：DSP 帮助你从第一天就开始积累受众数据（浏览、加购、购买人群），这些数据越早积累，后续再营销效果越好
+3️⃣ 打破冷启动：单纯依赖搜索广告（SA），新店铺很难与成熟卖家竞争关键词。DSP 通过展示广告主动触达消费者，帮助打破冷启动困境
+4️⃣ 全漏斗协同：DSP（上漏斗引流）+ SA（下漏斗转化）配合，形成完整的广告闭环
+
+建议：新店铺可以从较小预算开始测试 DSP，重点关注品牌认知和受众积累指标（如 DPV、NTB 新客占比）。`
+  },
+  {
+    keywords: ['最低预算','预算','花多少钱','费用','价格','多少钱','起投','投多少'],
+    synonyms: ['成本','收费','贵不贵','便宜','划算','花费','开销','门槛','起步价','最少投'],
+    answer: `Amazon DSP 预算相关信息：
+
+⚠️ 重要提醒：目前中国跨境卖家无法自助开通 DSP，需要通过亚马逊授权的 DSP 服务商（代理商）来投放。服务商会根据你的需求制定投放方案。
+
+💰 DSP 预算一般参考：
+• 测试阶段：建议月预算 $3,000-5,000 起步，确保有足够数据进行优化
+• 稳定投放：根据品类和目标灵活调整，通常月预算 $10,000+ 能获得更稳定的效果
+• 大促期间：建议提前 2-4 周加大预算进行受众蓄水
+• 服务商通常会收取广告花费一定比例的服务费，具体费率因服务商而异
+
+📌 商品推广（Sponsored Products）：
+• 无最低预算要求，卖家可以自己在广告后台直接操作
+• 按点击付费（CPC），只有顾客点击广告时才收费
+• 可自主设置每日预算和竞价
+
+💡 如需 DSP 服务商推荐或了解具体合作方式，欢迎转人工咨询。`
+  },
+  {
+    keywords: ['效果','衡量','roi','roas','指标','kpi','怎么看','数据','报告','归因'],
+    synonyms: ['好不好','有没有用','值不值','回报','转化','成效','表现','业绩','评估','分析','看什么数据'],
+    answer: `DSP 广告效果衡量的核心指标：
+
+📊 上漏斗（品牌认知）：
+• Impressions（展示量）
+• Reach（触达人数）
+• Brand Search Lift（品牌搜索提升）
+
+📊 中漏斗（考虑）：
+• CTR（点击率）
+• DPV / DPVR（商品详情页浏览量/浏览率）
+• Add to Cart（加购）
+
+📊 下漏斗（转化）：
+• ROAS（广告投资回报率）
+• Total ROAS（含 14 天归因窗口）
+• Purchase Rate（购买率）
+• NTB（新客占比）— 非常重要的指标
+
+💡 关键提醒：
+• DSP 是上漏斗产品，不建议仅用 ROAS 来衡量
+• 应该关注全漏斗指标，特别是 NTB（新客占比）和 Brand Search Lift
+• 可以通过 Amazon Marketing Cloud (AMC) 进行更深度的全链路归因分析
+• 建议结合 SA 和 DSP 的数据综合评估广告效果`
+  },
+  {
+    keywords: ['sponsored tv','stv','视频广告','tv广告','流媒体','streaming tv','电视广告'],
+    synonyms: ['prime video广告','twitch广告','ott','大屏广告','视频投放','电视投放'],
+    answer: `Sponsored TV (STV) 是亚马逊的流媒体电视广告产品：
+
+🎬 核心特点：
+• 在 Prime Video、Amazon Freevee、Twitch 及第三方流媒体应用上投放视频广告
+• 无最低预算要求，按 CPM 计费
+• 利用亚马逊购物数据进行受众定向
+• 支持 15秒 和 30秒 视频格式
+
+📺 适用场景：
+• 品牌故事讲述和大规模品牌曝光
+• 新品发布和重大促销活动推广
+• 触达"剪线族"（cord-cutters）— 不看传统电视但使用流媒体的消费者
+
+✅ 优势：结合了传统电视广告的大屏冲击力和数字广告的精准定向能力。`
+  },
+  {
+    keywords: ['商品推广','sponsored products','sp广告','搜索广告','关键词广告','cpc'],
+    synonyms: ['sp怎么用','sp怎么投','搜索排名','关键词竞价','点击广告','怎么打广告','基础广告'],
+    answer: `商品推广（Sponsored Products）是亚马逊最基础也最常用的广告产品：
+
+📌 基本信息：
+• 采用单次点击成本（CPC）定价，只有顾客点击才收费
+• 支持图片和视频格式
+• 无最低预算要求，几分钟即可创建广告活动
+
+📍 广告展示位置：
+• 亚马逊站内：搜索结果顶部、旁边、中间，以及商品详情页
+• 亚马逊站外：精选的优质第三方应用程序和网站
+
+🔶 核心优势：
+• 直接将顾客引导至商品详情页，点击一两下即可购买
+• 灵活的关键词投放和商品投放选项
+• 仅在商品有货时展示
+• 提供详细的广告活动报告洞察
+
+📋 创建步骤：
+1. 注册搜索广告账户
+2. 点击"创建广告活动"选择"商品推广"
+3. 添加要推广的商品
+4. 确定投放方案、关键词和竞价
+5. 设置广告活动名称、日期和每日预算
+6. 启动广告活动
+
+适用于：专业卖家、供应商、图书供应商、KDP 作者和服务商。`
+  },
+  {
+    keywords: ['品牌推广','sponsored brands','sb广告','品牌广告','头条广告','旗舰店'],
+    synonyms: ['品牌曝光','品牌展示','logo广告','品牌旗舰','sb怎么投','品牌知名度'],
+    answer: `品牌推广（Sponsored Brands）帮助顾客发现你的品牌：
+
+📌 核心特点：
+• 展示品牌 Logo、自定义标题和多个商品
+• 支持图片、视频和旗舰店聚焦等多种广告格式
+• 按点击付费（CPC）
+• 展示在搜索结果页面的醒目位置
+
+🔶 广告格式：
+• 商品集：展示品牌 Logo + 最多 3 个商品
+• 旗舰店聚焦：引导顾客到品牌旗舰店
+• 视频：用视频展示商品特点和品牌故事
+
+💡 适用场景：
+• 提升品牌知名度和可见度
+• 推广品牌旗舰店
+• 展示多个商品系列
+• 讲述品牌故事
+
+建议：配合品牌旗舰店（Brand Store）使用效果更佳，可以为顾客提供沉浸式的品牌购物体验。`
+  },
+  {
+    keywords: ['展示型推广','sponsored display','sd广告','展示广告','再营销','retargeting'],
+    synonyms: ['sd怎么投','重定向','回头客','浏览过没买','竞品广告','商品页广告','站外展示'],
+    answer: `展示型推广（Sponsored Display）帮助你在购物旅程中触达相关受众：
+
+📌 核心特点：
+• 支持受众定向和商品定向
+• 按点击付费（CPC）或按千次展示付费（vCPM）
+• 覆盖亚马逊站内和站外
+
+🔶 定向方式：
+• 受众定向：基于购物行为（浏览、购买等）触达相关受众
+• 商品定向：在特定商品详情页或相关品类页面展示广告
+• 再营销：触达浏览过你商品但未购买的顾客
+
+📍 展示位置：
+• 亚马逊站内：商品详情页、搜索结果页、首页等
+• 亚马逊站外：第三方网站和应用
+
+💡 适用场景：
+• 再营销（触达浏览过但未购买的顾客）
+• 竞品拦截（在竞品详情页展示广告）
+• 交叉销售（向购买过相关商品的顾客推荐）
+• 品类拓展`
+  },
+  {
+    keywords: ['prime day','大促','黑五','会员日','促销','旺季','蓄水','节日'],
+    synonyms: ['黑色星期五','双十一','圣诞','新年','打折','活动','秒杀','deal','闪购','备战','准备'],
+    answer: `大促期间的广告策略建议：
+
+📅 大促前（蓄水期，提前 2-4 周）：
+• 加大 DSP 预算进行受众蓄水，积累品牌认知和受众资产
+• 优化商品详情页（图片、A+内容、评论）确保"零售就绪"
+• 测试并优化 SA 关键词和竞价策略
+• 准备好促销 Deal 和优惠券
+
+🔥 大促期间：
+• SA：提高竞价，确保核心关键词的广告位
+• DSP：加大再营销力度，转化蓄水期积累的受众
+• 密切监控预算消耗，避免提前耗尽
+• 关注实时数据，及时调整策略
+
+📈 大促后：
+• 利用 DSP 再营销触达大促期间浏览但未购买的顾客
+• 分析大促数据，优化后续广告策略
+• 保持一定的广告投入，维持品牌曝光
+
+💡 关键提醒：大促的成功 70% 取决于蓄水期的准备工作。越早开始 DSP 蓄水，大促期间的转化效果越好。`
+  },
+  {
+    keywords: ['amc','amazon marketing cloud','营销云','数据分析','归因分析','洞察'],
+    synonyms: ['数据平台','分析工具','全链路','跨渠道分析','深度分析','高级分析'],
+    answer: `Amazon Marketing Cloud (AMC) 是亚马逊的数据分析和洞察工具：
+
+📊 核心功能：
+• 全链路归因分析：了解 DSP + SA 的协同效果
+• 受众洞察：深入分析目标受众的购物行为和偏好
+• 自定义报告：根据业务需求创建定制化分析报告
+• 跨渠道分析：整合多个广告渠道的数据
+
+🔶 典型应用场景：
+• 分析 DSP 和 SA 的重叠受众和增量效果
+• 了解消费者从认知到购买的完整路径
+• 识别高价值受众群体进行精准投放
+• 评估不同广告策略的真实 ROI
+
+💡 AMC 是 DSP 广告主的强大分析工具，可以帮助你更科学地评估广告效果和优化投放策略。`
+  },
+  {
+    keywords: ['受众','定向','人群','targeting','audience','投放策略'],
+    synonyms: ['目标客户','目标人群','精准投放','谁能看到','投给谁','怎么定向','人群包','兴趣定向'],
+    answer: `Amazon DSP 的受众定向能力：
+
+🎯 定向类型：
+• In-Market 受众：正在积极浏览和购买特定品类的消费者
+• Lifestyle 受众：基于长期购物行为和兴趣的人群画像
+• 再营销受众：浏览过你的商品/品牌但未购买的消费者
+• 相似受众（Lookalike）：与你现有客户特征相似的新受众
+• 自定义受众：基于 AMC 数据创建的精准人群包
+
+🔶 DSP 独特优势：
+• 基于亚马逊第一方购物数据，比第三方数据更精准
+• 无需依赖第三方 Cookie，在隐私保护趋势下仍然有效
+• 支持确定性和模型化受众定向
+• 可以触达亚马逊站内和站外的目标受众
+
+💡 建议策略：
+• 新品期：重点使用 In-Market 和 Lifestyle 受众扩大认知
+• 成长期：加入再营销和相似受众提升转化
+• 成熟期：利用 AMC 自定义受众进行精细化运营`
+  },
+  {
+    keywords: ['代理商','agency','服务商','谁来操作','托管','自助','怎么开始','开户'],
+    synonyms: ['找谁做','外包','第三方','合作伙伴','怎么注册','怎么开通','开账户','申请','入驻'],
+    answer: `使用 Amazon DSP 的两种方式：
+
+1️⃣ 自助服务（Self-Service）：
+• 自己或团队直接操作 DSP 控制台
+• 无最低消费要求
+• 适合有一定广告运营经验的团队
+• 需要注册亚马逊广告账户
+
+2️⃣ 通过代理商/服务商：
+• 由专业的亚马逊广告代理商代为操作
+• 代理商提供策略制定、广告创建、优化和报告
+• 适合没有专业广告团队或希望获得专家支持的卖家
+• 代理商通常会收取服务费（一般为广告花费的一定比例）
+
+💡 如何选择代理商：
+• 确认代理商是否有亚马逊广告认证
+• 了解代理商的行业经验和成功案例
+• 明确服务范围、费用结构和报告频率
+• 建议同时对比 2-3 家代理商
+
+如需代理商推荐或进一步了解开户流程，欢迎转人工咨询。`
+  },
+  {
+    keywords: ['认证','考试','学习','培训','课程','academy','证书'],
+    synonyms: ['怎么学','去哪学','教程','入门学习','官方培训','免费课程','考证'],
+    answer: `Amazon Ads Academy 提供免费的广告学习资源：
+
+📚 推荐课程：
+• Amazon Ads 入门（28分钟）— 适合零基础
+• 搜索广告基础学习路径（1小时39分钟）— SA 入门必修
+• 广告控制台操作指南（10分钟）— 快速上手
+• 根据业务目标创建广告活动（21分钟）
+
+🏆 认证考试：
+• Amazon DSP 认证 — 证明你掌握 DSP 基础知识
+• Amazon DSP 高级认证 — 进阶能力认证
+• 搜索广告认证 — SA 专业能力认证
+
+💡 所有课程和认证都是免费的，任何人都可以注册学习。
+访问 Amazon Ads Academy 开始学习：advertising.amazon.com/academy`
+  }
+];
+
+// ========== STATE ==========
+let chatHistory = [];
+let msgCounter = 0;
+
+// ========== CORE FUNCTIONS ==========
+function findAnswer(question) {
+  const q = normalize(question);
+  const qChars = q.split('');
+  let bestMatch = null;
+  let bestScore = 0;
+
+  for (const item of knowledgeBase) {
+    let score = 0;
+
+    // 1. Direct keyword match (highest weight)
+    for (const kw of item.keywords) {
+      const nkw = normalize(kw);
+      if (q.includes(nkw)) {
+        score += nkw.length * 3;
+      }
+    }
+
+    // 2. Synonym expansion match
+    if (item.synonyms) {
+      for (const syn of item.synonyms) {
+        const nsyn = normalize(syn);
+        if (q.includes(nsyn)) {
+          score += nsyn.length * 2;
+        }
+      }
+    }
+
+    // 3. Fuzzy character overlap (for typos and partial matches)
+    for (const kw of item.keywords) {
+      const nkw = normalize(kw);
+      if (nkw.length < 2) continue;
+      let overlap = 0;
+      for (const ch of nkw) {
+        if (q.includes(ch)) overlap++;
+      }
+      const ratio = overlap / nkw.length;
+      if (ratio >= 0.7) {
+        score += Math.floor(ratio * nkw.length);
+      }
+    }
+
+    // 4. Answer content match (low weight fallback)
+    const answerNorm = normalize(item.answer).substring(0, 200);
+    const qWords = extractWords(q);
+    let answerHits = 0;
+    for (const w of qWords) {
+      if (w.length >= 2 && answerNorm.includes(w)) answerHits++;
+    }
+    score += answerHits;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = item;
+    }
+  }
+
+  // Dynamic threshold based on question length
+  const threshold = Math.max(3, Math.floor(q.length * 0.3));
+
+  if (bestMatch && bestScore >= threshold) {
+    return { found: true, answer: bestMatch.answer };
+  }
+
+  // Try partial match with relaxed scoring
+  if (bestMatch && bestScore >= 2) {
+    return {
+      found: true,
+      answer: bestMatch.answer + `\n\n💡 以上是我根据你的问题找到的最相关内容。如果没有完全解答你的疑问，可以点击"需要人工"获得更精准的支持。`
+    };
+  }
+
+  return {
+    found: false,
+    answer: `抱歉，我暂时无法准确回答这个问题。\n\n你的问题已记录，我们的广告经理会尽快为你提供专业解答。你也可以：\n• 换个方式描述你的问题\n• 点击下方"转人工"按钮，留下联系方式获得 1 对 1 支持`
+  };
+}
+
+// ========== TEXT PROCESSING HELPERS ==========
+function normalize(text) {
+  return text.toLowerCase()
+    .replace(/[？?！!。，,、；;：:（）()\[\]【】{}"'"'\s]+/g, '')
+    .replace(/amazon/gi, '亚马逊')
+    .replace(/dsp/gi, 'dsp')
+    .replace(/sponsored\s*products?/gi, '商品推广')
+    .replace(/sponsored\s*brands?/gi, '品牌推广')
+    .replace(/sponsored\s*display/gi, '展示型推广')
+    .replace(/sponsored\s*tv/gi, 'stv');
+}
+
+function extractWords(text) {
+  const words = [];
+  // Extract 2-4 char Chinese segments
+  for (let len = 4; len >= 2; len--) {
+    for (let i = 0; i <= text.length - len; i++) {
+      words.push(text.substring(i, i + len));
+    }
+  }
+  // Extract English words
+  const eng = text.match(/[a-z]{2,}/g);
+  if (eng) words.push(...eng);
+  return [...new Set(words)];
+}
+
+function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  // Hide welcome
+  const welcome = document.getElementById('welcome');
+  const tags = document.getElementById('quickTags');
+  if (welcome) welcome.style.display = 'none';
+  if (tags) tags.style.display = 'none';
+
+  // Add user message
+  addMessage('user', text);
+  input.value = '';
+  autoResize(input);
+
+  // Show typing
+  showTyping();
+
+  // Find answer
+  const result = findAnswer(text);
+
+  setTimeout(() => {
+    hideTyping();
+    const aiMsgId = addMessage('ai', result.answer);
+    addFeedback(aiMsgId, text, result.answer, result.found);
+    saveToHistory(text, result.answer, result.found);
+  }, 800 + Math.random() * 800);
+}
+
+function addMessage(role, text) {
+  const chatArea = document.getElementById('chatArea');
+  const id = 'msg-' + (++msgCounter);
+  const avatar = role === 'user' ? '&#128100;' : '&#129302;';
+
+  const msgDiv = document.createElement('div');
+  msgDiv.className = 'msg msg-' + role;
+  msgDiv.id = id;
+  msgDiv.innerHTML = `
+    <div class="msg-avatar">${avatar}</div>
+    <div class="msg-bubble">${escapeHtml(text)}</div>
+  `;
+  chatArea.appendChild(msgDiv);
+  chatArea.scrollTop = chatArea.scrollHeight;
+
+  chatHistory.push({ id, role, text, time: new Date().toISOString() });
+  return id;
+}
+
+function addFeedback(msgId, question, answer, wasFound) {
+  const chatArea = document.getElementById('chatArea');
+  const fbDiv = document.createElement('div');
+  fbDiv.className = 'feedback';
+  fbDiv.id = 'fb-' + msgId;
+  fbDiv.innerHTML = `
+    <button class="feedback-btn" onclick="handleFeedback('${msgId}','good','${encodeURIComponent(question)}')">&#128077; 有帮助</button>
+    <button class="feedback-btn" onclick="handleFeedback('${msgId}','bad','${encodeURIComponent(question)}')">&#128078; 需要人工</button>
+  `;
+  chatArea.appendChild(fbDiv);
+  chatArea.scrollTop = chatArea.scrollHeight;
+
+  if (!wasFound) {
+    saveTicket(question, answer, 'auto-escalated');
+  }
+}
+
+function handleFeedback(msgId, type, encodedQ) {
+  const fbDiv = document.getElementById('fb-' + msgId);
+  const question = decodeURIComponent(encodedQ);
+
+  if (type === 'good') {
+    fbDiv.innerHTML = '<div class="feedback-done">&#10003; 感谢反馈！</div>';
+  } else {
+    fbDiv.innerHTML = '';
+    showHumanForm(fbDiv, question, msgId);
+    saveTicket(question, '', 'seller-requested');
+  }
+}
+
+function showHumanForm(container, question, msgId) {
+  const formDiv = document.createElement('div');
+  formDiv.className = 'human-form';
+  formDiv.innerHTML = `
+    <p>&#128221; 已转人工，请留下你的信息，广告经理会尽快联系你：</p>
+    <textarea id="detail-${msgId}" placeholder="补充说明你的问题或需求（选填）"></textarea>
+    <div class="form-row">
+      <input id="contact-${msgId}" placeholder="企业微信 / 微信号 / 邮箱" />
+      <button onclick="submitHuman('${msgId}','${encodeURIComponent(question)}')">提交</button>
+    </div>
+  `;
+  container.appendChild(formDiv);
+  document.getElementById('chatArea').scrollTop = document.getElementById('chatArea').scrollHeight;
+}
+
+function submitHuman(msgId, encodedQ) {
+  const detail = document.getElementById('detail-' + msgId).value;
+  const contact = document.getElementById('contact-' + msgId).value;
+  const question = decodeURIComponent(encodedQ);
+
+  if (!contact.trim()) {
+    alert('请填写联系方式，方便我们联系你');
+    return;
+  }
+
+  // Update ticket
+  updateTicket(question, detail, contact);
+
+  // Send WeChat Work notification (placeholder)
+  sendWeChatNotification(question, detail, contact);
+
+  // Replace form with success
+  const fbDiv = document.getElementById('fb-' + msgId);
+  fbDiv.innerHTML = '<div class="submit-success">&#10003; 已提交！广告经理会尽快通过你留下的联系方式与你沟通。</div>';
+}
+</script>
+<script>
+// ========== TICKET SYSTEM (localStorage) ==========
+function getTickets() {
+  return JSON.parse(localStorage.getItem('odt_tickets') || '[]');
+}
+
+function saveTicket(question, aiAnswer, source) {
+  const tickets = getTickets();
+  tickets.push({
+    id: 'T-' + Date.now(),
+    question: question,
+    aiAnswer: aiAnswer,
+    detail: '',
+    contact: '',
+    source: source,
+    status: 'pending',
+    adminReply: '',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+  localStorage.setItem('odt_tickets', JSON.stringify(tickets));
+}
+
+function updateTicket(question, detail, contact) {
+  const tickets = getTickets();
+  for (let i = tickets.length - 1; i >= 0; i--) {
+    if (tickets[i].question === question && tickets[i].status === 'pending') {
+      tickets[i].detail = detail;
+      tickets[i].contact = contact;
+      tickets[i].status = 'waiting';
+      tickets[i].updatedAt = new Date().toISOString();
+      break;
+    }
+  }
+  localStorage.setItem('odt_tickets', JSON.stringify(tickets));
+}
+
+// ========== WECOM WEBHOOK (placeholder) ==========
+function sendWeChatNotification(question, detail, contact) {
+  // TODO: Replace with your actual WeCom Bot Webhook URL
+  const webhookUrl = 'YOUR_WECOM_WEBHOOK_URL';
+
+  const payload = {
+    msgtype: 'markdown',
+    markdown: {
+      content: `**🔔 新的人工咨询请求**\n` +
+        `> 问题：${question}\n` +
+        `> 补充：${detail || '无'}\n` +
+        `> 联系方式：${contact}\n` +
+        `> 时间：${new Date().toLocaleString('zh-CN')}\n\n` +
+        `请尽快处理 [查看后台](admin.html)`
+    }
+  };
+
+  if (webhookUrl !== 'YOUR_WECOM_WEBHOOK_URL') {
+    fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(err => console.log('WeChat notification failed:', err));
+  } else {
+    console.log('[WeChat通知模拟]', payload.markdown.content);
+  }
+}
+
+// ========== UI HELPERS ==========
+function showTyping() {
+  const chatArea = document.getElementById('chatArea');
+  const div = document.createElement('div');
+  div.className = 'msg msg-ai';
+  div.id = 'typing-indicator';
+  div.innerHTML = `
+    <div class="msg-avatar">&#129302;</div>
+    <div class="msg-bubble"><div class="typing"><span></span><span></span><span></span></div></div>
+  `;
+  chatArea.appendChild(div);
+  chatArea.scrollTop = chatArea.scrollHeight;
+}
+
+function hideTyping() {
+  const el = document.getElementById('typing-indicator');
+  if (el) el.remove();
+}
+
+function askQuick(el) {
+  document.getElementById('userInput').value = el.textContent;
+  sendMessage();
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// ========== RESET & HISTORY ==========
+function resetChat() {
+  document.getElementById('chatArea').innerHTML = '';
+  document.getElementById('welcome').style.display = '';
+  document.getElementById('quickTags').style.display = '';
+  document.getElementById('userInput').value = '';
+  chatHistory = [];
+  msgCounter = 0;
+}
+
+function toggleHistory(e) {
+  e.preventDefault();
+  const panel = document.getElementById('historyPanel');
+  const overlay = document.getElementById('historyOverlay');
+  const isOpen = panel.classList.contains('open');
+  if (isOpen) {
+    closeHistory();
+  } else {
+    renderHistory();
+    panel.classList.add('open');
+    overlay.classList.add('open');
+  }
+}
+
+function closeHistory() {
+  document.getElementById('historyPanel').classList.remove('open');
+  document.getElementById('historyOverlay').classList.remove('open');
+}
+
+function getHistoryRecords() {
+  return JSON.parse(localStorage.getItem('odt_chat_history') || '[]');
+}
+
+function saveToHistory(question, answer, found) {
+  const records = getHistoryRecords();
+  records.unshift({
+    question: question,
+    answer: answer,
+    found: found,
+    time: new Date().toISOString()
+  });
+  // Keep last 50 records
+  if (records.length > 50) records.length = 50;
+  localStorage.setItem('odt_chat_history', JSON.stringify(records));
+}
+
+function renderHistory() {
+  const records = getHistoryRecords();
+  const list = document.getElementById('historyList');
+
+  if (records.length === 0) {
+    list.innerHTML = '<div class="history-empty">&#128203; 暂无历史记录</div>';
+    return;
+  }
+
+  list.innerHTML = records.map((r, i) => {
+    const time = new Date(r.time).toLocaleString('zh-CN');
+    const statusClass = r.found ? 'answered' : 'escalated';
+    const statusText = r.found ? 'AI 已回答' : '已转人工';
+    return `<div class="history-item" onclick="replayQuestion(${i})">
+      <div class="hi-q">${escapeHtml(r.question)}</div>
+      <div class="hi-time">${time}</div>
+      <span class="hi-status ${statusClass}">${statusText}</span>
+    </div>`;
+  }).join('');
+}
+
+function replayQuestion(index) {
+  const records = getHistoryRecords();
+  const r = records[index];
+  if (!r) return;
+  closeHistory();
+  // Clear and replay
+  document.getElementById('chatArea').innerHTML = '';
+  document.getElementById('welcome').style.display = 'none';
+  document.getElementById('quickTags').style.display = 'none';
+  addMessage('user', r.question);
+  addMessage('ai', r.answer);
+}
+
+function clearHistory() {
+  if (confirm('确定要清空所有历史记录吗？')) {
+    localStorage.removeItem('odt_chat_history');
+    renderHistory();
+  }
+}
+</script>
+</body>
+</html>
