@@ -16,7 +16,7 @@
 body{font-family:'Noto Sans SC','Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
 .header{background:var(--primary);color:white;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;}
 .header-left{display:flex;align-items:center;gap:12px;}
-.header-logo{font-size:1.3rem;font-weight:700;cursor:pointer;}
+.header-logo{font-size:1.3rem;font-weight:700;cursor:pointer;color:white;}
 .header-logo span{color:var(--accent);}
 .header-tag{font-size:0.75rem;padding:3px 10px;background:rgba(255,153,0,0.2);color:var(--accent);border-radius:12px;font-weight:500;}
 .header-right{display:flex;gap:12px;align-items:center;}
@@ -645,11 +645,11 @@ function findAnswer(question) {
     if (score > bestScore) { bestScore = score; bestMatch = item; }
   }
 
-  const threshold = Math.max(3, Math.floor(q.length * 0.3));
+  const threshold = Math.max(6, Math.floor(q.length * 0.4));
   const answer = bestMatch ? (currentLang === 'zh' ? bestMatch.answer_zh : bestMatch.answer_en) : '';
 
   if (bestMatch && bestScore >= threshold) return { found: true, answer };
-  if (bestMatch && bestScore >= 2) return { found: true, answer: answer + T('partialMatch') };
+  // Score too low — let DeepSeek handle it
   return { found: false, answer: T('noAnswer') };
 }
 
@@ -663,13 +663,47 @@ function sendMessage() {
   addMessage('user', text);
   input.value = ''; autoResize(input);
   showTyping();
-  const result = findAnswer(text);
-  setTimeout(() => {
+
+  // Try local knowledge base first
+  const localResult = findAnswer(text);
+  if (localResult.found) {
+    setTimeout(() => {
+      hideTyping();
+      const aiMsgId = addMessage('ai', localResult.answer);
+      addFeedback(aiMsgId, text, localResult.answer, true);
+      saveToHistory(text, localResult.answer, true);
+    }, 600 + Math.random() * 400);
+    return;
+  }
+
+  // Fall back to DeepSeek AI
+  fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question: text, lang: currentLang })
+  })
+  .then(r => r.json())
+  .then(data => {
     hideTyping();
-    const aiMsgId = addMessage('ai', result.answer);
-    addFeedback(aiMsgId, text, result.answer, result.found);
-    saveToHistory(text, result.answer, result.found);
-  }, 800 + Math.random() * 800);
+    if (data.answer) {
+      const aiMsgId = addMessage('ai', data.answer);
+      addFeedback(aiMsgId, text, data.answer, true);
+      saveToHistory(text, data.answer, true);
+    } else {
+      const fallback = T('noAnswer');
+      const aiMsgId = addMessage('ai', fallback);
+      addFeedback(aiMsgId, text, fallback, false);
+      saveToHistory(text, fallback, false);
+    }
+  })
+  .catch(err => {
+    hideTyping();
+    console.error('API error:', err);
+    const fallback = T('noAnswer');
+    const aiMsgId = addMessage('ai', fallback);
+    addFeedback(aiMsgId, text, fallback, false);
+    saveToHistory(text, fallback, false);
+  });
 }
 
 function addMessage(role, text) {
