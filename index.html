@@ -645,7 +645,7 @@ function findAnswer(question) {
     if (score > bestScore) { bestScore = score; bestMatch = item; }
   }
 
-  const threshold = Math.max(10, Math.floor(q.length * 0.5));
+  const threshold = Math.max(15, Math.floor(q.length * 0.6));
   const answer = bestMatch ? (currentLang === 'zh' ? bestMatch.answer_zh : bestMatch.answer_en) : '';
 
   if (bestMatch && bestScore >= threshold) return { found: true, answer };
