@@ -645,7 +645,7 @@ function findAnswer(question) {
     if (score > bestScore) { bestScore = score; bestMatch = item; }
   }
 
-  const threshold = Math.max(15, Math.floor(q.length * 0.6));
+  const threshold = Math.max(6, Math.floor(q.length * 0.4));
   const answer = bestMatch ? (currentLang === 'zh' ? bestMatch.answer_zh : bestMatch.answer_en) : '';
 
   if (bestMatch && bestScore >= threshold) return { found: true, answer };
@@ -664,19 +664,7 @@ function sendMessage() {
   input.value = ''; autoResize(input);
   showTyping();
 
-  // Try local knowledge base first
-  const localResult = findAnswer(text);
-  if (localResult.found) {
-    setTimeout(() => {
-      hideTyping();
-      const aiMsgId = addMessage('ai', localResult.answer);
-      addFeedback(aiMsgId, text, localResult.answer, true);
-      saveToHistory(text, localResult.answer, true);
-    }, 600 + Math.random() * 400);
-    return;
-  }
-
-  // Fall back to DeepSeek AI
+  // Call DeepSeek AI
   fetch('/api/chat', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
